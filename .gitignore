@@ -1,3 +1,5 @@
 projects/
 tools/
 *~
+*.cmp
+*.tst
