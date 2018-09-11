@@ -3,3 +3,4 @@ tools/
 *~
 *.cmp
 *.tst
+*.out
