@@ -48,7 +48,7 @@ CHIP CPU {
     Mux16(a=instruction, b=ALUoutput , sel=instruction[15], out=MUXoutput);
 
     // A register
-    ARegister(in=MUXoutput, load=instruction[5], out=Aoutput);
+    ARegister(in=MUXoutput, load=instruction[5], out=Aoutput, out[0..14]=addressM);
 
     // ************************* //
     // D-register implementation //
@@ -66,6 +66,48 @@ CHIP CPU {
     Mux16(a=Aoutput, b=inM, sel=instruction[12], out=AMoutput);
     
     // ALU: choose between D register and A or M registers, and apply the function to compute (coded in instruction[6..11] in C-instructions)
-    ALU(x=Doutput, y=AMoutput, zx=instruction[11], nx=instruction[10], zy=instruction[9], ny=instruction[8], f=instruction[7], no=instruction[6], out=ALUoutput, zr=zr, ng=ng);
+    ALU(x=Doutput,
+	y=AMoutput,
+    	zx=instruction[11],
+	nx=instruction[10],
+	zy=instruction[9],
+	ny=instruction[8],
+	f=instruction[7],
+	no=instruction[6],
+	out=ALUoutput,
+	out=outM,
+	zr=zr,
+	ng=ng);
 
+
+    // ****************************** //
+    // Program Counter implementation //
+    // ****************************** //
+
+    // From the ALU output we know:
+    // 	    if zr == 1, then out = 0
+    //	    if ng == 1, then out < 0
+    // So we need to know when out > 0
+    Or(a=zr, b=ng, out=notpositive);
+    Not(in=notpositive, out=positive);
+
+    // We should jump in these cases
+    And(a=instruction[0], b=positive, out=jumppositive);
+    And(a=instruction[1], b=zr, out=jumpzero);
+    And(a=instruction[2], b=ng, out=jumpnegative);
+
+    // Combine all jumps in one variable
+    Or(a=jumppositive, b=jumpnegative, out=jumpnozero);
+    Or(a=jumpzero, b=jumpnozero, out=jump);
+
+    // Jump if jump == 1 and we have a C-instruction (
+    And(a=jump, b=instruction[15], out=loadPC);
+
+    PC(in=Aoutput, load=loadPC, inc=true, reset=reset, out[0..14]=pc);
+
+    // *************** //
+    // Write to memory //
+    // *************** //
+
+    And(a=instruction[3], b=instruction[15], out=writeM);
 }
