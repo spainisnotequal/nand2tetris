@@ -48,14 +48,17 @@ CHIP CPU {
     Mux16(a=instruction, b=ALUoutput , sel=instruction[15], out=MUXoutput);
 
     // A register
-    ARegister(in=MUXoutput, load=instruction[5], out=Aoutput, out[0..14]=addressM);
+    Not(in=instruction[15], out=isAinstruction);
+    Or(a=isAinstruction, b=instruction[5], out=loadA);
+    ARegister(in=MUXoutput, load=loadA, out=Aoutput, out[0..14]=addressM);
 
     // ************************* //
     // D-register implementation //
     // ************************* //
 
     // D register
-    DRegister(in=ALUoutput, load=instruction[4], out=Doutput);
+    And(a=instruction[15], b=instruction[4], out=loadD);
+    DRegister(in=ALUoutput, load=loadD, out=Doutput);
 
 
     // ****************** //
