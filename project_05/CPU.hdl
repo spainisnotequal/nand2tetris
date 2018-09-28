@@ -39,5 +39,33 @@ CHIP CPU {
         pc[15];          // address of next instruction
 
     PARTS:
-    // Put your code here:
+
+    // ************************* //
+    // A-register implementation //
+    // ************************* //
+
+    // Mux chip
+    Mux16(a=instruction, b=ALUoutput , sel=instruction[15], out=MUXoutput);
+
+    // A register
+    ARegister(in=MUXoutput, load=instruction[5], out=Aoutput);
+
+    // ************************* //
+    // D-register implementation //
+    // ************************* //
+
+    // D register
+    DRegister(in=ALUoutput, load=instruction[4], out=Doutput);
+
+
+    // ****************** //
+    // ALU implementation //
+    // ****************** //
+
+    // select between A-register or M-register as input to the ALU
+    Mux16(a=Aoutput, b=inM, sel=instruction[12], out=AMoutput);
+    
+    // ALU: choose between D register and A or M registers, and apply the function to compute (coded in instruction[6..11] in C-instructions)
+    ALU(x=Doutput, y=AMoutput, zx=instruction[11], nx=instruction[10], zy=instruction[9], ny=instruction[8], f=instruction[7], no=instruction[6], out=ALUoutput, zr=zr, ng=ng);
+
 }
