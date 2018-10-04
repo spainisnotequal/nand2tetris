@@ -8,6 +8,7 @@ import re
 
 from parser import *
 from dictionaries import *
+from symbolTable import *
 
 
 if __name__ == "__main__":
@@ -18,6 +19,10 @@ if __name__ == "__main__":
         ASSEMBLY_FILE = argv[1]
 
     HACK_FILE = ASSEMBLY_FILE.split('.')[0] + ".hack"
+
+    # ---------- #
+    # First pass #
+    # ---------- #
 
     with open(ASSEMBLY_FILE) as ifile:
         asm_code = ifile.readlines()
@@ -32,20 +37,48 @@ if __name__ == "__main__":
     # remove blank lines
     asm_code = [line for line in asm_code if line != '']
 
+    ROM_address = 0
+
+    for command in asm_code:
+        ctype = commandType(command)
+
+        if ctype == "A_COMMAND" or ctype == "C_COMMAND":
+            ROM_address = ROM_address + 1
+        else:  # L_COMMAND
+            newsymbol = symbol(command)
+            SYMBOLS[newsymbol] = ROM_address
+
+    # ----------- #
+    # Second pass #
+    # ----------- #
+
+    RAM_address = 16
+
     with open(HACK_FILE, 'w') as ofile:
         for command in asm_code:
             ctype = commandType(command)
+
             if ctype == "A_COMMAND":  # @value
                 value = symbol(command)
+                if value.isdigit():
+                    code_value = value
+                else:
+                    if value in SYMBOLS:
+                        code_value = SYMBOLS[value]
+                    else:
+                        SYMBOLS[value] = RAM_address
+                        code_value = RAM_address
+                        RAM_address = RAM_address + 1
                 # "rjust" adds zeros to the right to make a 15 digits number
-                binary = '0' + bin(int(value))[2:].rjust(15, '0')
+                binary = '0' + bin(int(code_value))[2:].rjust(15, '0')
+                ofile.write(binary + '\n')
+
             elif ctype == "C_COMMAND":  # dest=comp;jump
                 d = dest(command)
                 c = comp(command)
                 j = jump(command)
                 binary = "111" + COMP[c] + DEST[d] + JUMP[j]
-            else:  # ctype == "L_COMMAND":
-                print("We are not considering L-intructions yet")
+                ofile.write(binary + '\n')
 
-            # write the resulting binary number to the file
-            ofile.write(binary + '\n')
+            else:  # ctype == "L_COMMAND"
+                pass  # nothing to do in this case
